@@ -5,35 +5,30 @@ from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, datasets
 
 def initialize_model():
-    # 加载已经完成预训练的ResNet-50模型
     resnet50 = models.resnet50(pretrained=True)
 
-    # 冻结模型的所有参数，避免在训练过程中更新它们
+    #! 冻结了模型的大部分参数，除了最后一层全连接层的参数
     for param in resnet50.parameters():
         param.requires_grad = False
 
     # 获取全连接层(fc)的输入特征数量
+    # output: 2048 
+    # (在 ResNet-50 中，最后一个卷积层的输出特征数是 2048)
     num_ftrs = resnet50.fc.in_features
-
-    # 替换全连接层以适应新的分类任务
-    # 假设我们的新任务只有2个类别
+    
+    # 全连接层: Input参数+Output分类数量
     resnet50.fc = nn.Linear(num_ftrs, 2)
-    print(resnet50.fc)
 
-    # 打印修改后的模型结构
-    print(resnet50)
-
-    # 定义损失函数和优化器
+    # 损失函数：Entroy Loss
     criterion = nn.CrossEntropyLoss()
+
+    # 优化器：Adam Optimizer
     optimizer = torch.optim.Adam(resnet50.fc.parameters(), lr=0.001)
 
-    # 接下来，你可以使用自定义的数据加载器来训练和测试模型
-    # 注意：由于我们冻结了模型的大部分参数，仅全连接层的参数会在训练过程中更新
+    return resnet50, criterion, optimizer
 
-
-
+# Dataloader: 训练和测试模型
 def Dataloader():
-    # 你可以使用自定义的数据加载器来训练和测试模型
     # 图像预处理
     transform = transforms.Compose([
         transforms.Resize((224, 224)),  # 调整图像大小以匹配ResNet的输入尺寸
@@ -99,12 +94,13 @@ def validate_model(model, dataloaders, criterion):
 if __name__ == "__main__":
     # 初始化模型、损失函数和优化器
     model, criterion, optimizer = initialize_model()
+    
+    # dataloaders = {
+    #     'train': train_loader,
+    #     'val': val_loader
+    # }
 
-    dataloaders = {
-        'train': train_loader,
-        'val': val_loader
-    }
-    train_model(model, dataloaders, criterion, optimizer, num_epochs=25)
-    validate_model(model, dataloaders, criterion)
+    # train_model(model, dataloaders, criterion, optimizer, num_epochs=25)
+    # validate_model(model, dataloaders, criterion)
 
      
