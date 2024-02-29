@@ -32,6 +32,7 @@ class CustomDataset(Dataset):
 
     def __getitem__(self, idx):
         img_name = os.path.join(self.root_dir, self.image_filenames[idx])
+
         image = Image.open(img_name).convert('RGB')
 
         if self.transform:
@@ -47,15 +48,10 @@ def get_dataloaders():
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]), # 归一化
     ])
 
-    #* 自己创建的数据集
-
     train_dataset = datasets.ImageFolder(root='data_new/train', transform=transform)
-    # val_dataset = datasets.ImageFolder(root='data_new/valid_new', transform=transform)
     val_dataset= CustomDataset(root_dir=os.path.join('data', 'valid'), transform=transform)
 
-    # 创建数据加载器, train_loader和val_loader是两个迭代器，用于训练和验证，每次迭代返回一个batch的数据
     train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=4)
-    # val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False, num_workers=4)
     val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False, num_workers=4)
 
     return {'train': train_loader, 'val': val_loader}
@@ -86,14 +82,15 @@ def classify_images(model, dataloader):
     model.eval()  
     predictions = {}
     for inputs, filenames in dataloader['val']:  
-        # 迭代遍历验证数据加载器 dataloader['val'] 中的每个批次
-        # print("filenames: ", filenames) # tensor([0, 0, 0, 0, 1, 1, 1])
-        with torch.no_grad():  # 确保在推断时不计算梯度
+        with torch.no_grad(): 
             outputs = model(inputs) 
-            _, preds = torch.max(outputs, 1)    
+            #! 在此处已经获取了每组的预测值
+            # torch.max()返回两个值，第一个是最大值，第二个是最大值的索引
+            a, preds = torch.max(outputs, 1)  
+            print(a)
+            print("preds: ", preds)  
             for filename, pred in zip(filenames, preds):                
                 train_dataset = dataloader['val'].dataset
-                # predictions[filename] = train_dataset.classes[pred.item()]
                 predictions[filename] = train_dataset.image_filenames[pred.item()]
     print("Predictions: ", predictions)
 
