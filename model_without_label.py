@@ -86,15 +86,17 @@ def classify_images(model, dataloader):
             outputs = model(inputs) 
             #! 在此处已经获取了每组的预测值
             # torch.max()返回两个值，第一个是最大值，第二个是最大值的索引
-            a, preds = torch.max(outputs, 1)  
-            print(a)
-            print("preds: ", preds)  
-            for filename, pred in zip(filenames, preds):                
-                train_dataset = dataloader['val'].dataset
-                predictions[filename] = train_dataset.image_filenames[pred.item()]
+            _, preds = torch.max(outputs, 1) 
+            preds = ["panda" if pred.item() == 1 else "man" for pred in preds]
+
+            for filename, pred in zip(filenames, preds):  
+                predictions[filename] = pred
+                # predictions[filename] = dataloader['val'].dataset.classes[pred.item()]
+
     print("Predictions: ", predictions)
 
     return predictions
+
 
 
 if __name__ == "__main__":
