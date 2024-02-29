@@ -11,20 +11,33 @@ from PIL import Image
 def initialize_model():
     resnet50 = models.resnet50(pretrained=True)
 
-    #! 冻结模型的所有参数，避免在训练过程中更新它们
     for param in resnet50.parameters():
         param.requires_grad = False
 
-    # 1.全连接层, 2048 -> 2
     num_ftrs = resnet50.fc.in_features
     resnet50.fc = nn.Linear(num_ftrs, 2)
-    # 2.损失函数: Cross Entropy Loss
     criterion = nn.CrossEntropyLoss()
-    # 3.优化器: Adam Optimizer, lr是学习率
     optimizer = torch.optim.Adam(resnet50.fc.parameters(), lr=0.001)
 
     return resnet50, criterion, optimizer
 
+class CustomDataset(Dataset):
+    def __init__(self, root_dir, transform=None):
+        self.root_dir = root_dir
+        self.transform = transform
+        self.image_filenames = os.listdir(root_dir)
+
+    def __len__(self):
+        return len(self.image_filenames)
+
+    def __getitem__(self, idx):
+        img_name = os.path.join(self.root_dir, self.image_filenames[idx])
+        image = Image.open(img_name).convert('RGB')
+
+        if self.transform:
+            image = self.transform(image)
+
+        return image, self.image_filenames[idx]
 
 def get_dataloaders():
     # 图像预处理
@@ -34,10 +47,15 @@ def get_dataloaders():
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]), # 归一化
     ])
 
-    train_dataset = datasets.ImageFolder(root='data_new/train', transform=transform)
-    val_dataset = datasets.ImageFolder(root='data_new/valid_new', transform=transform)
+    #* 自己创建的数据集
 
+    train_dataset = datasets.ImageFolder(root='data_new/train', transform=transform)
+    # val_dataset = datasets.ImageFolder(root='data_new/valid_new', transform=transform)
+    val_dataset= CustomDataset(root_dir=os.path.join('data', 'valid'), transform=transform)
+
+    # 创建数据加载器, train_loader和val_loader是两个迭代器，用于训练和验证，每次迭代返回一个batch的数据
     train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=4)
+    # val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False, num_workers=4)
     val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False, num_workers=4)
 
     return {'train': train_loader, 'val': val_loader}
@@ -63,27 +81,7 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25):
         
         print(f'Epoch {epoch}/{num_epochs - 1} Train Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f}')
 
-# validation 1: Given the images with labels, calculate the loss and accuracy of the model
-def validate_model(model, dataloaders, criterion):
-    model.eval()
-    running_loss = 0.0
-    running_corrects = 0
 
-    for inputs, labels in dataloaders['val']:
-        with torch.no_grad(): # 确保在推断时不计算梯度
-            outputs = model(inputs)
-            loss = criterion(outputs, labels)
-            _, preds = torch.max(outputs, 1)
-            running_loss += loss.item() * inputs.size(0)
-            running_corrects += torch.sum(preds == labels.data)
-
-    total_loss = running_loss / len(dataloaders['val'].dataset)
-    total_acc = running_corrects.double() / len(dataloaders['val'].dataset)
-    print(f'Val Loss: {total_loss:.4f} Acc: {total_acc:.4f}')
-
-# validation 2
-# Without label, just classify the images
-# output the predictions in the form of dictionary, with image name as key and predicted class as value
 def classify_images(model, dataloader):  
     model.eval()  
     predictions = {}
@@ -95,20 +93,20 @@ def classify_images(model, dataloader):
             _, preds = torch.max(outputs, 1)    
             for filename, pred in zip(filenames, preds):                
                 train_dataset = dataloader['val'].dataset
-                predictions[filename] = train_dataset.classes[pred.item()]
+                # predictions[filename] = train_dataset.classes[pred.item()]
+                predictions[filename] = train_dataset.image_filenames[pred.item()]
     print("Predictions: ", predictions)
 
     return predictions
 
 
 if __name__ == "__main__":
-    # 1. 初始化模型
+    #TODO: Check the GPU (Unresolved)
+
     model, criterion, optimizer = initialize_model()
-    # 2. 获取数据加载器
+
     dataloaders = get_dataloaders()
-    # 3. 训练模型
+
     train_model(model, dataloaders, criterion, optimizer, num_epochs=25)
-    # 4. 验证模型
-    validate_model(model, dataloaders, criterion)
-    # 5. 分类图像
+
     classify_images(model, dataloaders)
