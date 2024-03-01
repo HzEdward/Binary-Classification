@@ -15,6 +15,7 @@ def initialize_model():
         param.requires_grad = False
 
     num_ftrs = resnet50.fc.in_features
+    
     resnet50.fc = nn.Linear(num_ftrs, 2)
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(resnet50.fc.parameters(), lr=0.001)
@@ -56,7 +57,7 @@ def get_dataloaders():
 
     return {'train': train_loader, 'val': val_loader}
 
-def train_model(model, dataloaders, criterion, optimizer, num_epochs=25):
+def train_model(model, dataloaders, criterion, optimizer, num_epochs=24):
     for epoch in range(num_epochs):
         model.train()
         running_loss = 0
@@ -100,12 +101,11 @@ def classify_images(model, dataloader):
 
 
 if __name__ == "__main__":
-    #TODO: Check the GPU (Unresolved)
 
     model, criterion, optimizer = initialize_model()
 
     dataloaders = get_dataloaders()
 
-    train_model(model, dataloaders, criterion, optimizer, num_epochs=25)
+    train_model(model, dataloaders, criterion, optimizer, num_epochs=24)
 
     classify_images(model, dataloaders)
