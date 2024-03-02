@@ -3,38 +3,23 @@ import torchvision.models as models
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, datasets
-import sys
 import os
 from PIL import Image
+import sys
 
-class DualInputResNet(nn.Module):
-    def __init__(self):
-        super(DualInputResNet, self).__init__()
-        # 加载预训练的ResNet-50模型
-        self.resnet = models.resnet50(pretrained=True)
-        
-        # 冻结模型的所有参数
-        for param in self.resnet.parameters():
-            param.requires_grad = False
-        
-        # 获取ResNet-50的全连接层输入特征数
-        num_ftrs = self.resnet.fc.in_features
-        
-        # 定义新的全连接层，输出维度为2，即两个类别
-        self.fc = nn.Linear(num_ftrs * 2, 2)  # * 2 是因为有两个输入图像
-        
-    def forward(self, input1, input2):
-        # 分别传递两个输入图像到ResNet-50模型
-        output1 = self.resnet(input1)
-        output2 = self.resnet(input2)
-        
-        # 将两个输出特征连接起来
-        combined_output = torch.cat((output1, output2), dim=1)
-        
-        # 使用新的全连接层进行分类
-        output = self.fc(combined_output)
-        
-        return output
+def initialize_model():
+    resnet50 = models.resnet50(pretrained=True)
+
+    for param in resnet50.parameters():
+        param.requires_grad = False
+
+    num_ftrs = resnet50.fc.in_features
+    
+    resnet50.fc = nn.Linear(num_ftrs, 2)
+    criterion = nn.CrossEntropyLoss()
+    optimizer = torch.optim.Adam(resnet50.fc.parameters(), lr=0.001)
+
+    return resnet50, criterion, optimizer
 
 class CustomDataset(Dataset):
     def __init__(self, root_dir, transform=None):
@@ -53,28 +38,24 @@ class CustomDataset(Dataset):
         if self.transform:
             image = self.transform(image)
 
-        return image
+        return image, self.image_filenames[idx]
 
+# 需要进行修改，因为现在数据库的读入是不同的
 def get_dataloaders():
+    # 图像预处理
     transform = transforms.Compose([
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        transforms.Resize((224, 224)), # 调整图像大小以匹配ResNet的输入尺寸
+        transforms.ToTensor(), # 将图像转换成Tensor
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]), # 归一化
     ])
 
-    train_dataset = datasets.ImageFolder(root='data_simu/train', transform=transform)
+    train_dataset = datasets.ImageFolder(root='data_new/train', transform=transform)
     val_dataset= CustomDataset(root_dir=os.path.join('data', 'valid'), transform=transform)
 
     train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=4)
     val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False, num_workers=4)
 
     return {'train': train_loader, 'val': val_loader}
-
-def initialize_model():
-    model = DualInputResNet()
-    criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-    return model, criterion, optimizer
 
 def train_model(model, dataloaders, criterion, optimizer, num_epochs=24):
     for epoch in range(num_epochs):
@@ -84,12 +65,7 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=24):
 
         for inputs, labels in dataloaders['train']:
             optimizer.zero_grad()
-            
-            # 分别取出两个输入图像
-            input1 = inputs[:, :3, :, :]  # 第一个图像
-            input2 = inputs[:, 3:, :, :]  # 第二个图像
-            
-            outputs = model(input1, input2)
+            outputs = model(inputs)
             loss = criterion(outputs, labels)
             _, preds = torch.max(outputs, 1)
             loss.backward()
@@ -105,25 +81,25 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=24):
 def classify_images(model, dataloader):  
     model.eval()  
     predictions = {}
-    for inputs in dataloader['val']:  
+    for inputs, filenames in dataloader['val']:  
         with torch.no_grad(): 
-            # 分别取出两个输入图像
-            input1 = inputs[:, :3, :, :]  # 第一个图像
-            input2 = inputs[:, 3:, :, :]  # 第二个图像
-            
-            outputs = model(input1, input2) 
-            _, preds = torch.max(outputs, 1)
-            
+            outputs = model(inputs) 
+            #! 在此处已经获取了每组的预测值
+            # torch.max()返回两个值，第一个是最大值，第二个是最大值的索引
+            _, preds = torch.max(outputs, 1) 
             preds = ["panda" if pred.item() == 1 else "man" for pred in preds]
 
-            for filename, pred in zip(filename, preds):  
+            for filename, pred in zip(filenames, preds):  
                 predictions[filename] = pred
+                # predictions[filename] = dataloader['val'].dataset.classes[pred.item()]
 
     print("Predictions: ", predictions)
 
     return predictions
 
+
 if __name__ == "__main__":
+
     model, criterion, optimizer = initialize_model()
 
     dataloaders = get_dataloaders()
