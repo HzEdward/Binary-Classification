@@ -35,6 +35,25 @@ class DualInputResNet(nn.Module):
         output = self.fc(combined_output)
         
         return output
+    
+class ModifiedResNet50(nn.Module):
+    def __init__(self):
+        super(ModifiedResNet50, self).__init__()
+        original_model = models.resnet50(pretrained=True)
+        self.features = nn.Sequential(
+            nn.Conv2d(6, 64, kernel_size=7, stride=2, padding=3, bias=False),
+            *list(original_model.children())[1:-2]
+        )
+        
+        self.classifier = nn.Linear(2048, 2)
+        
+    def forward(self, x):
+        x = self.features(x)
+        x = nn.functional.adaptive_avg_pool2d(x, (1, 1))
+        x = torch.flatten(x, 1)
+        x = self.classifier(x)
+        return x
+
 
 class CustomDataset(Dataset):
     def __init__(self, root_dir, transform=None):
