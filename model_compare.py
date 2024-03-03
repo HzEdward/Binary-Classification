@@ -66,8 +66,6 @@ def get_dataloaders():
     
     return {'train': train_loader, 'val': val_loader}
 
-
-
 class SingleInputResNet(nn.Module):
     def __init__(self):
         super(SingleInputResNet, self).__init__()
@@ -117,6 +115,7 @@ def initialize_model():
 
 
 def train_model(model, dataloaders, criterion, optimizer, num_epochs=24):
+    print("Training started!")
     for epoch in range(num_epochs):
         model.train()
         running_loss = 0
@@ -136,15 +135,14 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=24):
         epoch_acc = running_corrects.double() / len(dataloaders['train'].dataset)
         
         print(f'Epoch {epoch}/{num_epochs - 1} Train Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f}')
+    print("Training finished!")
 
 
 if __name__ == "__main__":
     model, criterion, optimizer = initialize_model()
     dataloaders = get_dataloaders()
     train_model(model, dataloaders, criterion, optimizer)
-    print("Training finished!")
-
-
-    
-    
-
+    # print("Training finished!")
+    # input= torch.rand(1, 4, 224, 224)
+    # output=SingleInputResNet.forward(model, input)
+    # print("output: ", output.shape)

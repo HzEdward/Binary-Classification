@@ -6,6 +6,7 @@ from torchvision import transforms, datasets
 import sys
 import os
 from PIL import Image
+from dataloader import *
 
 class SegmentationDataset(Dataset):
     def __init__(self, root_dir, transform=None, transform_segmentation=None):
@@ -54,6 +55,7 @@ def get_dataloaders():
     transform_segmentation = transforms.Compose([
         transforms.Resize((224, 224)),
         transforms.ToTensor(),
+        transforms.Normalize(mean=[0.5], std=[0.5])
         #TODO： check if this is the correct normalization
     ])
     
@@ -105,7 +107,6 @@ class SingleInputResNet(nn.Module):
         output = self.fc(x)
         return output
 
-
 def initialize_model():
     model = SingleInputResNet()
     criterion = nn.CrossEntropyLoss()
@@ -113,8 +114,8 @@ def initialize_model():
 
     return model, criterion, optimizer
 
-
 def train_model(model, dataloaders, criterion, optimizer, num_epochs=24):
+    print("Training started!")
     for epoch in range(num_epochs):
         model.train()
         running_loss = 0
@@ -134,16 +135,35 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=24):
         epoch_acc = running_corrects.double() / len(dataloaders['train'].dataset)
         
         print(f'Epoch {epoch}/{num_epochs - 1} Train Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f}')
+    print("Training finished!")
 
+# write a valid function to test the model
+def valid_model(model, dataloaders, criterion):
+    print("Validation started!")
+    model.eval()
+    running_loss = 0
+    running_corrects = 0
+
+    for inputs, labels in dataloaders['val']:
+        outputs = model(inputs)
+        loss = criterion(outputs, labels)
+        _, preds = torch.max(outputs, 1)
+        running_loss += loss.item() * inputs.size(0)
+        running_corrects += torch.sum(preds == labels.data)
+
+    epoch_loss = running_loss / len(dataloaders['val'].dataset)
+    epoch_acc = running_corrects.double() / len(dataloaders['val'].dataset)
+    
+    print(f'Val Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f}')
+    print("Validation finished!")
 
 if __name__ == "__main__":
     model, criterion, optimizer = initialize_model()
     dataloaders = get_dataloaders()
     train_model(model, dataloaders, criterion, optimizer)
-    # print("Training finished!")
-    # input= torch.rand(1, 4, 224, 224)
-    # output=SingleInputResNet.forward(model, input)
-    # print("output: ", output.shape)
+    valid_model(model, dataloaders, criterion)
+    
+
 
     
     
