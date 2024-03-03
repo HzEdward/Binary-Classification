@@ -8,6 +8,11 @@ import os
 from PIL import Image
 from dataloader import *
 
+''''
+Model 1: SingleInputResNet
+     two image together, one is rgb, the other is segmentation, so the input channel is 4
+'''
+
 class SegmentationDataset(Dataset):
     def __init__(self, root_dir, transform=None, transform_segmentation=None):
         self.root_dir = root_dir
@@ -114,7 +119,7 @@ def initialize_model():
 
     return model, criterion, optimizer
 
-def train_model(model, dataloaders, criterion, optimizer, num_epochs=24):
+def train_model(model, dataloaders, criterion, optimizer, num_epochs=5):
     print("Training started!")
     for epoch in range(num_epochs):
         model.train()
@@ -162,6 +167,20 @@ if __name__ == "__main__":
     dataloaders = get_dataloaders()
     train_model(model, dataloaders, criterion, optimizer)
     valid_model(model, dataloaders, criterion)
+    # then what should I do
+    # save the model
+    torch.save(model.state_dict(), "model.pth")
+    # save the optimizer
+    torch.save(optimizer.state_dict(), "optimizer.pth")
+    # save the checkpoint
+    checkpoint = {
+        'model': model.state_dict(),
+        'optimizer': optimizer.state_dict(),
+        'epoch': 5
+    }
+    torch.save(checkpoint, "checkpoint.pth")
+
+
     
 
 
