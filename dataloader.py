@@ -37,7 +37,7 @@ class SegmentationDataset(Dataset):
         if self.transform_segmentation:
             segmentation_image = self.transform_segmentation(segmentation_image)
         
-        # label = 0 if label == "correct_label" else 1
+        label = 0 if label == "correct_label" else 1
         images = torch.cat([rgb_image, segmentation_image], dim=0)
 
         return images, label
@@ -59,6 +59,7 @@ def get_dataloaders():
     train_dataset = SegmentationDataset(root_dir='data_simu/train', transform=transform_rgb, transform_segmentation=transform_segmentation)
     val_dataset = SegmentationDataset(root_dir='data_simu/valid', transform=transform_rgb, transform_segmentation=transform_segmentation)
 
+    # note: batch size is 32
     train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
     

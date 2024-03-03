@@ -7,9 +7,66 @@ import sys
 import os
 from PIL import Image
 
-''''
-this is the code written by myself
-'''
+class SegmentationDataset(Dataset):
+    def __init__(self, root_dir, transform=None, transform_segmentation=None):
+        self.root_dir = root_dir
+        self.transform = transform
+        self.transform_segmentation = transform_segmentation
+        self.samples = []
+        
+        for label in ("correct_label", "mislabelled"):
+            label_dir = os.path.join(root_dir, label)
+            for folder in os.listdir(label_dir):
+                if folder.startswith('.'):
+                    continue
+                else:
+                    folder_path = os.path.join(label_dir, folder)
+                    rgb_image_path = os.path.join(folder_path, "original.jpeg")
+                    segmentation_image_path = os.path.join(folder_path, "gd.jpeg")
+                    self.samples.append((rgb_image_path, segmentation_image_path, label))
+                
+    def __len__(self):
+        return len(self.samples)
+    
+    def __getitem__(self, idx):
+        rgb_path, segmentation_path, label = self.samples[idx]
+        rgb_image = Image.open(rgb_path).convert("RGB")
+        segmentation_image = Image.open(segmentation_path).convert("L")
+        
+        if self.transform:
+            rgb_image = self.transform(rgb_image)
+        if self.transform_segmentation:
+            segmentation_image = self.transform_segmentation(segmentation_image)
+        
+        label = 0 if label == "correct_label" else 1
+        images = torch.cat([rgb_image, segmentation_image], dim=0)
+
+        return images, label
+
+def get_dataloaders():
+    transform_rgb = transforms.Compose([
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ])
+    
+    #* segmentation is 1 channel, so we only need to normalize it
+    transform_segmentation = transforms.Compose([
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        #TODO： check if this is the correct normalization
+    ])
+    
+    train_dataset = SegmentationDataset(root_dir='data_simu/train', transform=transform_rgb, transform_segmentation=transform_segmentation)
+    val_dataset = SegmentationDataset(root_dir='data_simu/valid', transform=transform_rgb, transform_segmentation=transform_segmentation)
+
+    # note: batch size is 32
+    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
+    
+    return {'train': train_loader, 'val': val_loader}
+
+
 
 class SingleInputResNet(nn.Module):
     def __init__(self):
@@ -50,6 +107,7 @@ class SingleInputResNet(nn.Module):
         output = self.fc(x)
         return output
 
+
 def initialize_model():
     model = SingleInputResNet()
     criterion = nn.CrossEntropyLoss()
@@ -66,11 +124,7 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=24):
 
         for inputs, labels in dataloaders['train']:
             optimizer.zero_grad() 
-            # 分别取出两个输入图像
-            input1 = inputs[:, :3, :, :]  # 第一个图像
-            input2 = inputs[:, 3:, :, :]  # 第二个图像
-            
-            outputs = model(input1, input2)
+            outputs = model(inputs)
             loss = criterion(outputs, labels)
             _, preds = torch.max(outputs, 1)
             loss.backward()
@@ -86,6 +140,11 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=24):
 
 if __name__ == "__main__":
     model, criterion, optimizer = initialize_model()
-    input = torch.randn(1, 4, 224, 224)
-    output = model(input)
+    dataloaders = get_dataloaders()
+    train_model(model, dataloaders, criterion, optimizer)
+    print("Training finished!")
+
+
+    
+    
 
