@@ -8,65 +8,64 @@ import os
 from PIL import Image
 from dataloader import *
 
-class SegmentationDataset(Dataset):
-    def __init__(self, root_dir, transform=None, transform_segmentation=None):
-        self.root_dir = root_dir
-        self.transform = transform
-        self.transform_segmentation = transform_segmentation
-        self.samples = []
+# class SegmentationDataset(Dataset):
+#     def __init__(self, root_dir, transform=None, transform_segmentation=None):
+#         self.root_dir = root_dir
+#         self.transform = transform
+#         self.transform_segmentation = transform_segmentation
+#         self.samples = []
         
-        for label in ("correct_label", "mislabelled"):
-            label_dir = os.path.join(root_dir, label)
-            for folder in os.listdir(label_dir):
-                if folder.startswith('.'):
-                    continue
-                else:
-                    folder_path = os.path.join(label_dir, folder)
-                    rgb_image_path = os.path.join(folder_path, "original.jpeg")
-                    segmentation_image_path = os.path.join(folder_path, "gd.jpeg")
-                    self.samples.append((rgb_image_path, segmentation_image_path, label))
+#         for label in ("correct_label", "mislabelled"):
+#             label_dir = os.path.join(root_dir, label)
+#             for folder in os.listdir(label_dir):
+#                 if folder.startswith('.'):
+#                     continue
+#                 else:
+#                     folder_path = os.path.join(label_dir, folder)
+#                     rgb_image_path = os.path.join(folder_path, "original.jpeg")
+#                     segmentation_image_path = os.path.join(folder_path, "gd.jpeg")
+#                     self.samples.append((rgb_image_path, segmentation_image_path, label))
                 
-    def __len__(self):
-        return len(self.samples)
+#     def __len__(self):
+#         return len(self.samples)
     
-    def __getitem__(self, idx):
-        rgb_path, segmentation_path, label = self.samples[idx]
-        rgb_image = Image.open(rgb_path).convert("RGB")
-        segmentation_image = Image.open(segmentation_path).convert("L")
+#     def __getitem__(self, idx):
+#         rgb_path, segmentation_path, label = self.samples[idx]
+#         rgb_image = Image.open(rgb_path).convert("RGB")
+#         segmentation_image = Image.open(segmentation_path).convert("L")
         
-        if self.transform:
-            rgb_image = self.transform(rgb_image)
-        if self.transform_segmentation:
-            segmentation_image = self.transform_segmentation(segmentation_image)
+#         if self.transform:
+#             rgb_image = self.transform(rgb_image)
+#         if self.transform_segmentation:
+#             segmentation_image = self.transform_segmentation(segmentation_image)
         
-        label = 0 if label == "correct_label" else 1
-        images = torch.cat([rgb_image, segmentation_image], dim=0)
+#         label = 0 if label == "correct_label" else 1
+#         images = torch.cat([rgb_image, segmentation_image], dim=0)
 
-        return images, label
+#         return images, label
 
-def get_dataloaders():
-    transform_rgb = transforms.Compose([
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-    ])
+# def get_dataloaders():
+#     transform_rgb = transforms.Compose([
+#         transforms.Resize((224, 224)),
+#         transforms.ToTensor(),
+#         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+#     ])
     
-    #* segmentation is 1 channel, so we only need to normalize it
-    transform_segmentation = transforms.Compose([
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.5], std=[0.5])
-        #TODO： check if this is the correct normalization
-    ])
+#     #* segmentation is 1 channel, so we only need to normalize it
+#     transform_segmentation = transforms.Compose([
+#         transforms.Resize((224, 224)),
+#         transforms.ToTensor(),
+#         transforms.Normalize(mean=[0.5], std=[0.5])
+#     ])
     
-    train_dataset = SegmentationDataset(root_dir='data_simu/train', transform=transform_rgb, transform_segmentation=transform_segmentation)
-    val_dataset = SegmentationDataset(root_dir='data_simu/valid', transform=transform_rgb, transform_segmentation=transform_segmentation)
+#     train_dataset = SegmentationDataset(root_dir='data_simu/train', transform=transform_rgb, transform_segmentation=transform_segmentation)
+#     val_dataset = SegmentationDataset(root_dir='data_simu/valid', transform=transform_rgb, transform_segmentation=transform_segmentation)
 
-    # note: batch size is 32
-    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
+#     # note: batch size is 32
+#     train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+#     val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
     
-    return {'train': train_loader, 'val': val_loader}
+#     return {'train': train_loader, 'val': val_loader}
 
 class SingleInputResNet(nn.Module):
     def __init__(self):
@@ -114,7 +113,7 @@ def initialize_model():
 
     return model, criterion, optimizer
 
-def train_model(model, dataloaders, criterion, optimizer, num_epochs=5):
+def train_model(model, dataloaders, criterion, optimizer, num_epochs=30):
     print("Training started!")
     for epoch in range(num_epochs):
         model.train()
@@ -157,23 +156,75 @@ def valid_model(model, dataloaders, criterion):
     print(f'Val Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f}')
     print("Validation finished!")
 
+'''
+write a function using the checkpoint to resume training
+'''
+def resume_training(model, optimizer, checkpoint, dataloaders, criterion, num_epochs=25):
+    model.load_state_dict(checkpoint['model'])
+    optimizer.load_state_dict(checkpoint['optimizer'])
+    start_epoch = checkpoint['epoch']
+    print(f"Resuming training from epoch {start_epoch}")
+    print("Training started!")
+
+    for epoch in range(start_epoch, num_epochs):
+        model.train()
+        running_loss = 0
+        running_corrects = 0
+
+        for inputs, labels in dataloaders['train']:
+            optimizer.zero_grad() 
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
+            _, preds = torch.max(outputs, 1)
+            loss.backward()
+            optimizer.step()
+            running_loss += loss.item() * inputs.size(0)
+            running_corrects += torch.sum(preds == labels.data)
+
+        epoch_loss = running_loss / len(dataloaders['train'].dataset)
+        epoch_acc = running_corrects.double() / len(dataloaders['train'].dataset)
+        
+        print(f'Epoch {epoch}/{num_epochs - 1} Train Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f}')
+        
+    print("Training finished!")
+
+'''
+write a function to test the model on the testset by using the checkpoint
+'''
+def test_model(model, dataloader, checkpoint):
+    model.load_state_dict(checkpoint['model'])
+    model.eval()
+    running_corrects = 0
+
+    for inputs, labels in dataloaders['val']:
+        outputs = model(inputs)
+        _, preds = torch.max(outputs, 1)
+        running_corrects += torch.sum(preds == labels.data)
+
+    epoch_acc = running_corrects.double() / len(dataloaders['val'].dataset)
+    print(f'Test Acc: {epoch_acc:.4f}')
+    print("Testing finished!")
+
+def create_checkpoint(model, optimizer, epoch):
+    checkpoint = {
+        'model': model.state_dict(),
+        'optimizer': optimizer.state_dict(),
+        'epoch': epoch
+    }
+    return checkpoint
+
+
 if __name__ == "__main__":
     model, criterion, optimizer = initialize_model()
     dataloaders = get_dataloaders()
     train_model(model, dataloaders, criterion, optimizer)
     valid_model(model, dataloaders, criterion)
-    # then what should I do
-    # save the model
-    torch.save(model.state_dict(), "model.pth")
-    # save the optimizer
-    torch.save(optimizer.state_dict(), "optimizer.pth")
-    # save the checkpoint
-    checkpoint = {
-        'model': model.state_dict(),
-        'optimizer': optimizer.state_dict(),
-        'epoch': 5
-    }
-    torch.save(checkpoint, "checkpoint.pth")
+    print("Saving the model")
+
+    
+
+        
+
 
 
     
