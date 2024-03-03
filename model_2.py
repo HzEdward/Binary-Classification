@@ -7,8 +7,9 @@ import sys
 import os
 from PIL import Image
 
-''''
-this is the code written by myself
+'''
+this is the code modified by ChatGPT based on model.py
+now we are examing how this could be different from our code.
 '''
 
 class SingleInputResNet(nn.Module):
@@ -50,6 +51,7 @@ class SingleInputResNet(nn.Module):
         output = self.fc(x)
         return output
 
+
 def initialize_model():
     model = SingleInputResNet()
     criterion = nn.CrossEntropyLoss()
@@ -66,11 +68,7 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=24):
 
         for inputs, labels in dataloaders['train']:
             optimizer.zero_grad() 
-            # 分别取出两个输入图像
-            input1 = inputs[:, :3, :, :]  # 第一个图像
-            input2 = inputs[:, 3:, :, :]  # 第二个图像
-            
-            outputs = model(input1, input2)
+            outputs = model(inputs)
             loss = criterion(outputs, labels)
             _, preds = torch.max(outputs, 1)
             loss.backward()
@@ -87,5 +85,3 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=24):
 if __name__ == "__main__":
     model, criterion, optimizer = initialize_model()
     input = torch.randn(1, 4, 224, 224)
-    output = model(input)
-

@@ -53,7 +53,7 @@ def get_dataloaders():
     transform_segmentation = transforms.Compose([
         transforms.Resize((224, 224)),
         transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485], std=[0.229]),
+        #TODO： check if this is the correct normalization
     ])
     
     train_dataset = SegmentationDataset(root_dir='data_simu/train', transform=transform_rgb, transform_segmentation=transform_segmentation)
@@ -76,7 +76,7 @@ if __name__ == "__main__":
     print("=====================================")
     for i, (image, labels) in enumerate(dataloaders['val']):
         print("image shape:", image.shape)
-        
+
         print("labels:", labels)
         if i == 0:
             break
