@@ -134,6 +134,8 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=30):
         epoch_acc = running_corrects.double() / len(dataloaders['train'].dataset)
         
         print(f'Epoch {epoch}/{num_epochs - 1} Train Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f}')
+        if epoch_acc == 1:
+            break
     print("Training finished!")
 
 # write a valid function to test the model
@@ -157,7 +159,7 @@ def valid_model(model, dataloaders, criterion):
     print("Validation finished!")
 
 '''
-write a function using the checkpoint to resume training
+the function using the checkpoint to resume training
 '''
 def resume_training(model, optimizer, checkpoint, dataloaders, criterion, num_epochs=25):
     model.load_state_dict(checkpoint['model'])
@@ -189,7 +191,7 @@ def resume_training(model, optimizer, checkpoint, dataloaders, criterion, num_ep
     print("Training finished!")
 
 '''
-write a function to test the model on the testset by using the checkpoint
+the function to test the model on the testset by using the checkpoint
 '''
 def test_model(model, dataloader, checkpoint):
     model.load_state_dict(checkpoint['model'])
@@ -211,15 +213,19 @@ def create_checkpoint(model, optimizer, epoch):
         'optimizer': optimizer.state_dict(),
         'epoch': epoch
     }
+    #save checkpoint inside logs folder
+    torch.save(checkpoint, 'logs/checkpoint.pth')
     return checkpoint
 
-
 if __name__ == "__main__":
+    # change cpu to gpu
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    print(device)
+
     model, criterion, optimizer = initialize_model()
     dataloaders = get_dataloaders()
     train_model(model, dataloaders, criterion, optimizer)
     valid_model(model, dataloaders, criterion)
-    print("Saving the model")
 
     
 
