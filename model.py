@@ -8,6 +8,18 @@ import os
 from PIL import Image
 from dataloader import *
 
+'''
+this is the main entry of the model, and it contains the following functions:
+1. initialize_model: initialize the model, criterion and optimizer
+2. train_model: train the model
+3. valid_model: validate the model
+4. resume_training: resume training from the checkpoint
+5. test_model: test the model on the testset
+6. create_checkpoint: create a checkpoint for the model
+
+note: the dataloader is defined in dataloader.py
+'''
+
 # class SegmentationDataset(Dataset):
 #     def __init__(self, root_dir, transform=None, transform_segmentation=None):
 #         self.root_dir = root_dir

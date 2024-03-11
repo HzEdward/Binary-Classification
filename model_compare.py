@@ -8,6 +8,26 @@ import os
 from PIL import Image
 
 class SegmentationDataset(Dataset):
+    """
+    一个用于分割数据的自定义数据集类。
+
+    参数:
+        root_dir (str): 数据集的根目录。
+        transform (callable, optional): 用于应用于 RGB 图像的函数/变换。
+        transform_segmentation (callable, optional): 用于应用于分割图像的函数/变换。
+
+    属性:
+        root_dir (str): 数据集的根目录。
+        transform (callable, optional): 用于应用于 RGB 图像的函数/变换。
+        transform_segmentation (callable, optional): 用于应用于分割图像的函数/变换。
+        samples (list): 包含 RGB 图像路径、分割图像路径和标签的元组列表。
+
+    方法:
+        __len__(): 返回数据集的长度。
+        __getitem__(idx): 返回给定索引处的 RGB 图像、分割图像和标签。
+
+    """
+
     def __init__(self, root_dir, transform=None, transform_segmentation=None):
         self.root_dir = root_dir
         self.transform = transform
@@ -26,9 +46,26 @@ class SegmentationDataset(Dataset):
                     self.samples.append((rgb_image_path, segmentation_image_path, label))
                 
     def __len__(self):
+        """
+        Returns the length of the dataset.
+
+        Returns:
+            int: The length of the dataset.
+
+        """
         return len(self.samples)
     
     def __getitem__(self, idx):
+        """
+        Returns the RGB image, segmentation image, and label at the given index.
+
+        Args:
+            idx (int): The index of the sample to retrieve.
+
+        Returns:
+            tuple: A tuple containing the RGB image, segmentation image, and label.
+
+        """
         rgb_path, segmentation_path, label = self.samples[idx]
         rgb_image = Image.open(rgb_path).convert("RGB")
         segmentation_image = Image.open(segmentation_path).convert("L")
@@ -105,14 +142,12 @@ class SingleInputResNet(nn.Module):
         output = self.fc(x)
         return output
 
-
 def initialize_model():
     model = SingleInputResNet()
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
     return model, criterion, optimizer
-
 
 def train_model(model, dataloaders, criterion, optimizer, num_epochs=24):
     print("Training started!")
@@ -136,7 +171,6 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=24):
         
         print(f'Epoch {epoch}/{num_epochs - 1} Train Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f}')
     print("Training finished!")
-
 
 if __name__ == "__main__":
     model, criterion, optimizer = initialize_model()
