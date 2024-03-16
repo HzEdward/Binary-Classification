@@ -31,8 +31,7 @@ class SegmentationDataset(Dataset):
                         elif file.startswith('label') and file.endswith('.png'):
                             segmentation_image_path = os.path.join(folder_path, file)
                     self.samples.append((rgb_image_path, segmentation_image_path, label))
-
-                
+  
     def __len__(self):
         return len(self.samples)
     
@@ -67,9 +66,12 @@ def get_dataloaders():
         transforms.Normalize(mean=[0.5], std=[0.229])
     ])
     
-    train_dataset = SegmentationDataset(root_dir='../Mislabelled Attempts (week 6)/dataset/train', transform=transform_rgb, transform_segmentation=transform_segmentation)
-    val_dataset = SegmentationDataset(root_dir='../Mislabelled Attempts (week 6)/dataset/test', transform=transform_rgb, transform_segmentation=transform_segmentation)
-
+    # train_dataset = SegmentationDataset(root_dir='../Mislabelled Attempts (week 6)/dataset/train', transform=transform_rgb, transform_segmentation=transform_segmentation)
+    # val_dataset = SegmentationDataset(root_dir='../Mislabelled Attempts (week 6)/dataset/test', transform=transform_rgb, transform_segmentation=transform_segmentation)
+    
+    train_dataset = SegmentationDataset(root_dir='../Final Dataset/train', transform=transform_rgb, transform_segmentation=transform_segmentation)
+    val_dataset = SegmentationDataset(root_dir='../Final Dataset/test', transform=transform_rgb, transform_segmentation=transform_segmentation)
+    
     #! note: batch size is 24
     train_loader = DataLoader(train_dataset, batch_size=24, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=24, shuffle=False)

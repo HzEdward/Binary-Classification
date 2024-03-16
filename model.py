@@ -26,7 +26,7 @@ note:
 
 
 '''
-
+''' the same dataloader as in dataloader.py
 # class SegmentationDataset(Dataset):
 #     def __init__(self, root_dir, transform=None, transform_segmentation=None):
 #         self.root_dir = root_dir
@@ -63,6 +63,7 @@ note:
 
 #         return images, label
 
+
 # def get_dataloaders():
 #     transform_rgb = transforms.Compose([
 #         transforms.Resize((224, 224)),
@@ -70,7 +71,7 @@ note:
 #         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 #     ])
     
-#     #* segmentation is 1 channel, so we only need to normalize it
+#* segmentation is 1 channel, so we only need to normalize it
 #     transform_segmentation = transforms.Compose([
 #         transforms.Resize((224, 224)),
 #         transforms.ToTensor(),
@@ -85,6 +86,7 @@ note:
 #     val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
     
 #     return {'train': train_loader, 'val': val_loader}
+'''
 
 class SingleInputResNet(nn.Module):
     def __init__(self):
