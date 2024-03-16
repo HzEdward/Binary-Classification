@@ -9,15 +9,22 @@ from PIL import Image
 from dataloader import *
 
 '''
-this is the main entry of the model, and it contains the following functions:
-1. initialize_model: initialize the model, criterion and optimizer
-2. train_model: train the model
-3. valid_model: validate the model
-4. resume_training: resume training from the checkpoint
-5. test_model: test the model on the testset
-6. create_checkpoint: create a checkpoint for the model
+这是模型的主入口，包含以下功能：
+    1. initialize_model: 初始化模型、标准和优化器
+    2. train_model: 训练模型
+    3. valid_model: 验证模型
+    4. resume_training: 从检查点恢复训练
+    5. test_model: 在测试集上测试模型
+    创建检查点(create_checkpoint): 为模型创建检查点
 
-note: the dataloader is defined in dataloader.py
+note: 
+* the dataloader is defined in dataloader.py。在本文件中Dataset读取被注释了，实际上这是一个可以工作的例子。
+* __getitem__中一定要用0和1来作为返回值,否则不符合内部操作规定
+
+在运行程序时注意：
+* 为了使用GPU，需要将模型和数据转移到GPU上，设置GPU.device("cuda:0"), 否则运行效果会比较慢
+
+
 '''
 
 # class SegmentationDataset(Dataset):
