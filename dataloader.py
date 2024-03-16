@@ -69,6 +69,7 @@ def get_dataloaders():
     # train_dataset = SegmentationDataset(root_dir='../Mislabelled Attempts (week 6)/dataset/train', transform=transform_rgb, transform_segmentation=transform_segmentation)
     # val_dataset = SegmentationDataset(root_dir='../Mislabelled Attempts (week 6)/dataset/test', transform=transform_rgb, transform_segmentation=transform_segmentation)
     
+    #* Testing on the final dataset
     train_dataset = SegmentationDataset(root_dir='../Final Dataset/train', transform=transform_rgb, transform_segmentation=transform_segmentation)
     val_dataset = SegmentationDataset(root_dir='../Final Dataset/test', transform=transform_rgb, transform_segmentation=transform_segmentation)
     
@@ -90,7 +91,6 @@ if __name__ == "__main__":
     print("=====================================")
     for i, (image, labels) in enumerate(dataloaders['val']):
         print("image shape:", image.shape)
-
         print("labels:", labels)
         if i == 0:
             break
