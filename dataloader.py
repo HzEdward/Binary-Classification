@@ -5,6 +5,7 @@ import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, models
 from PIL import Image
+import sys
 
 class SegmentationDataset(Dataset):
     def __init__(self, root_dir, transform=None, transform_segmentation=None):
@@ -38,6 +39,7 @@ class SegmentationDataset(Dataset):
     def __getitem__(self, idx):
         rgb_path, segmentation_path, label = self.samples[idx]
         rgb_image = Image.open(rgb_path).convert("RGB")
+        print("rgb_image:", rgb_path)
         segmentation_image = Image.open(segmentation_path).convert("L")
         
         if self.transform:
@@ -45,9 +47,15 @@ class SegmentationDataset(Dataset):
         if self.transform_segmentation:
             segmentation_image = self.transform_segmentation(segmentation_image)
     
-        #! Blacklist is 0, whitelist is 1
-        label = 0 if label == "whitelists" else 1
+        #* Blacklist is 0, whitelist is 1
+        label = 0 if label == "whitelist" else 1
         images = torch.cat([rgb_image, segmentation_image], dim=0)
+
+
+        if label == 1:
+            if rgb_path.__contains__("test") and rgb_path.__contains__("blacklist"):
+                print("rgb_image_path:", rgb_path)
+                print("segmentation_image_path:", segmentation_path)
 
         return images, label
 
@@ -73,7 +81,7 @@ def get_dataloaders():
     train_dataset = SegmentationDataset(root_dir='../Final Dataset/train', transform=transform_rgb, transform_segmentation=transform_segmentation)
     val_dataset = SegmentationDataset(root_dir='../Final Dataset/test', transform=transform_rgb, transform_segmentation=transform_segmentation)
     
-    #! note: batch size is 24
+    #* batch size is 24, so one enumerate will have 24 images
     train_loader = DataLoader(train_dataset, batch_size=24, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=24, shuffle=False)
     
@@ -81,22 +89,9 @@ def get_dataloaders():
 
 if __name__ == "__main__":
     dataloaders = get_dataloaders()
-
-    for i, (image, labels) in enumerate(dataloaders['train']):
-        print("image shape:", image.shape)
-        print("labels:", labels)
-        if i == 0:
-            break
-
-    print("=====================================")
     for i, (image, labels) in enumerate(dataloaders['val']):
         print("image shape:", image.shape)
         print("labels:", labels)
-        if i == 0:
+        if i == 10:
             break
         
-    print("=====================================")
-    for inputs, labels in dataloaders['train']:
-        print(inputs.shape)
-        print(labels)
-        break
